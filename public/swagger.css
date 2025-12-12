@@ -1,0 +1,103 @@
+/* ==========================================================
+   PUJAONE — CLEAN WHITE SWAGGER UI THEME (No custom header)
+   Lightweight + modern + fully compatible with Swagger topbar
+========================================================== */
+
+/* GLOBAL */
+.swagger-ui {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif !important;
+  background: #ffffff !important;
+  padding-bottom: 40px;
+}
+
+/* Keep default Swagger topbar but improve styling */
+.topbar {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  padding: 12px 20px !important;
+}
+
+.topbar .topbar-wrapper .link span {
+  color: #1d3557 !important;
+  font-weight: 600 !important;
+}
+
+/* TAG TITLE SECTION */
+.opblock-tag.no-desc span {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  color: #1d3557 !important;
+}
+
+/* OPERATION BLOCKS */
+.opblock {
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  background: #ffffff !important;
+}
+
+.opblock-summary {
+  padding: 18px !important;
+  background: #f8fafc !important;
+  border-radius: 12px !important;
+  border-left: 6px solid #4c6ef5 !important;
+}
+
+.opblock-summary-method {
+  border-radius: 6px !important;
+}
+
+.opblock-summary-description {
+  font-size: 14px !important;
+  color: #475569 !important;
+}
+
+/* METHOD COLORS */
+.opblock.opblock-get .opblock-summary {
+  border-left-color: #0ca678 !important;
+}
+
+.opblock.opblock-post .opblock-summary {
+  border-left-color: #1e88e5 !important;
+}
+
+.opblock.opblock-patch .opblock-summary {
+  border-left-color: #f59f00 !important;
+}
+
+.opblock.opblock-delete .opblock-summary {
+  border-left-color: #e03131 !important;
+}
+
+/* TRY OUT BUTTON */
+.try-out__btn {
+  background: #1e88e5 !important;
+  color: white !important;
+  border-radius: 6px !important;
+}
+
+/* EXECUTE BUTTON */
+.execute {
+  background: #0ca678 !important;
+  border-radius: 8px !important;
+  color: white !important;
+}
+
+/* RESPONSE TABLE */
+.responses-wrapper table {
+  border-radius: 10px !important;
+}
+
+/* Status text */
+.response-col_status {
+  color: #0ca678 !important;
+  font-weight: 600 !important;
+}
+
+/* SCHEMAS */
+.model-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #1d3557 !important;
+}
