@@ -14,6 +14,8 @@ import { PurohitModule } from './purohit/purohit.module';
 import { DevToolsModule } from './devtools/devtools.module';
 // import { BookingModule } from './booking/booking.module';
 import { PujaModule } from './puja/puja.module';
+import { PujaCategoryModule } from './puja-category/puja-category.module';
+import { PujaItemsModule } from './puja-items/puja-items.module';
 
 
 
@@ -35,6 +37,8 @@ import { PujaModule } from './puja/puja.module';
     PurohitModule,
     DevToolsModule,
     PujaModule,
+    PujaCategoryModule,
+    PujaItemsModule,
     // BookingModule,
   ],
 })
