@@ -16,6 +16,9 @@ import { UpdatePujaCategoryDto } from './dto/update-puja-category.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
+
+
 
 @ApiTags('Puja Categories')
 @Controller('puja-category')
@@ -24,7 +27,7 @@ export class PujaCategoryController {
 
   // ⭐ Admin create
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post()
   create(@Body() dto: CreatePujaCategoryDto) {
@@ -32,12 +35,14 @@ export class PujaCategoryController {
   }
 
   // ⭐ Public list
+  @Public()
   @Get()
   findAll() {
     return this.service.findAll();
   }
 
   // ⭐ Public get one
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
@@ -45,7 +50,7 @@ export class PujaCategoryController {
 
   // ⭐ Admin update
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePujaCategoryDto) {
@@ -54,7 +59,7 @@ export class PujaCategoryController {
 
   // ⭐ Admin delete
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete(':id')
   remove(@Param('id') id: string) {

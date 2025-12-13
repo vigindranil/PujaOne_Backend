@@ -7,6 +7,7 @@ import { UpdatePujaBenefitDto } from './dto/update-puja-benefit.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags("Puja Benefits")
 @Controller("puja-benefits")
@@ -15,7 +16,7 @@ export class PujaBenefitsController {
 
   // ⭐ Admin: Create benefit
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post("admin/:puja_id")
   create(
@@ -26,6 +27,7 @@ export class PujaBenefitsController {
   }
 
   // ⭐ Public: Get all benefits
+  @Public()
   @Get(":puja_id")
   findAll(@Param("puja_id") puja_id: string) {
     return this.service.findAll(puja_id);
@@ -33,7 +35,7 @@ export class PujaBenefitsController {
 
   // ⭐ Admin: Update
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch("admin/:id")
   update(
@@ -45,7 +47,7 @@ export class PujaBenefitsController {
 
   // ⭐ Admin: Delete
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete("admin/:id")
   remove(@Param("id") id: string) {
