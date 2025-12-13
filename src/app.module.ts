@@ -16,6 +16,12 @@ import { DevToolsModule } from './devtools/devtools.module';
 import { PujaModule } from './puja/puja.module';
 import { PujaCategoryModule } from './puja-category/puja-category.module';
 import { PujaItemsModule } from './puja-items/puja-items.module';
+import { PujaRequirementsModule } from './puja-requirements/puja-requirements.module';
+import { PujaPricingModule } from './puja-pricing/puja-pricing.module';
+import { PujaGalleryModule } from './puja-gallery/puja-gallery.module';
+import { PujaAddonsModule } from './puja-addons/puja-addons.module';
+import { PujaBenefitsModule } from './puja-benefits/puja-benefits.module';
+import { BookingModule } from './booking/booking.module';
 
 
 
@@ -39,7 +45,13 @@ import { PujaItemsModule } from './puja-items/puja-items.module';
     PujaModule,
     PujaCategoryModule,
     PujaItemsModule,
+    PujaRequirementsModule,
     // BookingModule,
+    PujaPricingModule,
+    PujaGalleryModule,
+    PujaAddonsModule,
+    PujaBenefitsModule,
+    BookingModule,
   ],
 })
 export class AppModule {}
