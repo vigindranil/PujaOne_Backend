@@ -1,12 +1,13 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsArray, IsDateString } from "class-validator";
+import { IsUUID, IsDateString, IsArray, IsString } from 'class-validator';
 
 export class AddAvailabilityDto {
-  @ApiProperty()
+  @IsUUID()
+  purohit_id: string;
+
   @IsDateString()
   date: string;
 
-  @ApiProperty({ example: ["06:00-08:00", "08:00-10:00"] })
   @IsArray()
+  @IsString({ each: true })
   time_slots: string[];
 }

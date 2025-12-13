@@ -12,6 +12,7 @@ import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
+    // 🌍 Global env config
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -19,21 +20,28 @@ import { RolesGuard } from './guards/roles.guard';
     UsersModule,
     PassportModule,
 
-    // ⭐ USE registerAsync — this ALWAYS reads env correctly
- JwtModule.registerAsync({
-  imports: [ConfigModule],
-  inject: [ConfigService],
-  useFactory: async (config: ConfigService) => ({
-    secret: config.get<string>('JWT_SECRET'),
-    signOptions: {
-      expiresIn: parseInt(config.get<string>('JWT_EXPIRES_IN') || '3600', 10), // ⭐ FIX
-    },
-  }),
-})
+    // 🔐 JWT async config (BEST PRACTICE)
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: parseInt(
+            config.get<string>('JWT_EXPIRES_IN') || '3600',
+            10,
+          ),
+        },
+      }),
+    }),
   ],
-
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy, RolesGuard],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    LocalStrategy,
+    RolesGuard, // ⭐ IMPORTANT
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

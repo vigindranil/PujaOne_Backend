@@ -1,10 +1,11 @@
-import { Controller, Post, Get, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Param, Body, UseGuards,  Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 import { PujaPricingService } from './puja-pricing.service';
 import { CreatePricingOptionDto } from './dto/create-pricing.dto';
 import { UpdatePricingOptionDto } from './dto/update-pricing.dto';
+import { ApiQuery } from '@nestjs/swagger';
 
 @ApiTags("Puja Pricing")
 @Controller("puja-pricing")
@@ -43,4 +44,21 @@ export class PujaPricingController {
   remove(@Param("id") id: string) {
     return this.service.remove(id);
   }
+
+  // 🔐 ADMIN CALENDAR
+    @Roles('ADMIN')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @Get('admin/calendar')
+    @ApiQuery({ name: 'month', example: 12 })
+    @ApiQuery({ name: 'year', example: 2025 })
+    getAdminCalendar(
+    @Query('month') month: number,
+    @Query('year') year: number,
+    ) {
+    return this.service.getAdminCalendar(
+        Number(month),
+        Number(year),
+    );
+    }
 }
