@@ -22,6 +22,8 @@ import { PujaGalleryModule } from './puja-gallery/puja-gallery.module';
 import { PujaAddonsModule } from './puja-addons/puja-addons.module';
 import { PujaBenefitsModule } from './puja-benefits/puja-benefits.module';
 import { BookingModule } from './booking/booking.module';
+import { PurohitAvailabilityModule } from './purohit-availability/purohit-availability.module';
+import { SamagriKitsModule } from './samagri-kits/samagri-kits.module';
 
 
 
@@ -52,6 +54,8 @@ import { BookingModule } from './booking/booking.module';
     PujaAddonsModule,
     PujaBenefitsModule,
     BookingModule,
+    PurohitAvailabilityModule,
+    SamagriKitsModule,
   ],
 })
 export class AppModule {}
