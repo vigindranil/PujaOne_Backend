@@ -22,6 +22,9 @@ import { AddAvailabilityDto } from './dto/add-availability.dto';
 import { BlockDateDto } from './dto/block-date.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { Public } from '../auth/decorators/public.decorator';
+
+
 
 @ApiTags('Purohit Availability')
 @Controller('purohit-availability')
@@ -30,7 +33,7 @@ export class PurohitAvailabilityController {
 
   // ⭐ PUROHIT ADD
   @Roles('PUROHIT')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('add')
   add(@Req() req, @Body() dto: AddAvailabilityDto) {
@@ -39,7 +42,7 @@ export class PurohitAvailabilityController {
 
   // 🚫 BLOCK DATE
   @Roles('PUROHIT')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('block-date')
   block(@Req() req, @Body() dto: BlockDateDto) {
@@ -47,6 +50,7 @@ export class PurohitAvailabilityController {
   }
 
   // 🔍 PUBLIC CHECK
+  @Public()
   @Post('check')
   check(@Body() dto: CheckAvailabilityDto, @Req() req) {
     return this.service.checkAvailability(req.body.purohit_id, dto);
@@ -54,7 +58,7 @@ export class PurohitAvailabilityController {
 
   // 📅 PUROHIT CALENDAR
   @Roles('PUROHIT')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('calendar')
   @ApiQuery({ name: 'month', example: 12 })
@@ -73,7 +77,7 @@ export class PurohitAvailabilityController {
 
   // 👑 ADMIN CALENDAR
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard,RolesGuard)
+//   @UseGuards(JwtAuthGuard,RolesGuard)
   @ApiBearerAuth()
   @Get('admin/calendar')
   @ApiQuery({ name: 'month', example: 12 })

@@ -9,6 +9,9 @@ import { UpdatePujaRequirementDto } from './dto/update-puja-requirement.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
+
+
 
 @ApiTags('Puja Requirements')
 @Controller('puja-requirements')
@@ -17,7 +20,7 @@ export class PujaRequirementsController {
 
   // ⭐ ADMIN: Add requirement to puja
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post(':pujaId')
   create(@Param('pujaId') pujaId: string, @Body() dto: CreatePujaRequirementDto) {
@@ -25,6 +28,7 @@ export class PujaRequirementsController {
   }
 
   // ⭐ Get all requirements for a puja
+  @Public()
   @Get('puja/:pujaId')
   findByPuja(@Param('pujaId') pujaId: string) {
     return this.service.findByPuja(pujaId);
@@ -32,7 +36,7 @@ export class PujaRequirementsController {
 
   // ⭐ ADMIN: Update requirement
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePujaRequirementDto) {
@@ -41,7 +45,7 @@ export class PujaRequirementsController {
 
   // ⭐ ADMIN: Delete requirement
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete(':id')
   remove(@Param('id') id: string) {

@@ -4,6 +4,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 import { PujaGalleryService } from './puja-gallery.service';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags("Puja Gallery")
 @Controller("puja-gallery")
@@ -12,7 +13,7 @@ export class PujaGalleryController {
 
   // ⭐ Admin upload image
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post("admin/:puja_id")
   @UseInterceptors(FileInterceptor("image"))
@@ -33,7 +34,7 @@ export class PujaGalleryController {
   ) {
     return this.service.upload(puja_id, file, Number(sort_order) || 1);
   }
-
+  @Public()
   // ⭐ Public list
   @Get(":puja_id")
   findAll(@Param("puja_id") puja_id: string) {
@@ -42,7 +43,7 @@ export class PujaGalleryController {
 
   // ⭐ Admin delete
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete("admin/:id")
   remove(@Param("id") id: string) {

@@ -18,6 +18,7 @@ import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 import {
   ApiBearerAuth,
@@ -37,7 +38,7 @@ export class PurohitController {
 
   // ⭐ Admin Create Purohit
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @Post('admin/create')
   @ApiOperation({ summary: 'Admin: Create User + Purohit in one-shot' })
   createOneShot(@Body() dto: AdminCreatePurohitDto) {
@@ -45,6 +46,7 @@ export class PurohitController {
   }
 
   // ⭐ Public List
+  @Public()
   @Get()
   @ApiOperation({ summary: 'List all Purohits' })
   findAll() {
@@ -52,6 +54,7 @@ export class PurohitController {
   }
 
   // ⭐ Single Purohit
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get Purohit details' })
   findOne(@Param('id') id: string) {
@@ -60,7 +63,7 @@ export class PurohitController {
 
   // ⭐ Admin Update Purohit
   @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Admin: Update Purohit info' })
   update(@Param('id') id: string, @Body() dto: UpdatePurohitDto) {
@@ -69,7 +72,7 @@ export class PurohitController {
 
   // ⭐ Purohit / Admin: Update Availability
   @Roles('PUROHIT', 'ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @Patch(':id/availability')
   @ApiOperation({ summary: 'Purohit: Update availability' })
   updateAvailability(@Param('id') id: string, @Body() dto: UpdateAvailabilityDto) {
@@ -81,7 +84,7 @@ export class PurohitController {
 
   // ⭐ Upload Profile Image
   @Roles('PUROHIT', 'ADMIN')
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @Post(':id/avatar')
   @ApiOperation({ summary: 'Upload Purohit profile picture' })
   @ApiConsumes('multipart/form-data')
@@ -101,6 +104,7 @@ export class PurohitController {
   }
 
   // ⭐ Get Avatar (Signed URL)
+    @Public()
     @Get(':id/avatar')
     @ApiOperation({ summary: 'Get Purohit avatar (public URL)' })
     getAvatar(@Param('id') id: string) {

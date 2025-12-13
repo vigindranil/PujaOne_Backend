@@ -1,17 +1,41 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class PujaGalleryService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(private readonly supabase: SupabaseService) {}
 
-  async upload(puja_id: string, file: Express.Multer.File, sortOrder = 1) {
-    if (!file) throw new BadRequestException("Image file is required");
+  // ============================
+  // UPLOAD IMAGE (ADMIN)
+  // ============================
+  async upload(
+    puja_id: string,
+    file: Express.Multer.File,
+    sortOrder = 1,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Image file is required');
+    }
 
+    // 🔍 1️⃣ Check puja exists
+    const { data: puja } = await this.supabase.client
+      .from('pujas')
+      .select('id')
+      .eq('id', puja_id)
+      .maybeSingle();
+
+    if (!puja) {
+      throw new NotFoundException('Puja not found');
+    }
+
+    // 📦 2️⃣ Upload to storage
     const ext = file.originalname.split('.').pop();
     const filePath = `${puja_id}/${Date.now()}.${ext}`;
 
-    // 🔥 Upload to storage
     const { error: uploadError } = await this.supabase.client.storage
       .from('puja-gallery')
       .upload(filePath, file.buffer, {
@@ -23,15 +47,15 @@ export class PujaGalleryService {
       throw new BadRequestException(uploadError.message);
     }
 
-    // 🔥 Public URL
+    // 🌐 3️⃣ Public URL
     const { data: urlData } = this.supabase.client.storage
       .from('puja-gallery')
       .getPublicUrl(filePath);
 
     const publicUrl = urlData?.publicUrl;
 
-    // 🔥 Insert DB record
-    const { data: dbData, error: dbError } = await this.supabase.client
+    // 🧾 4️⃣ Insert DB record
+    const { data, error } = await this.supabase.client
       .from('puja_gallery')
       .insert({
         puja_id,
@@ -41,33 +65,68 @@ export class PujaGalleryService {
       .select()
       .single();
 
-    if (dbError) {
-      throw new BadRequestException(dbError.message);
+    if (error) {
+      throw new BadRequestException(error.message);
     }
-
-    return dbData;
-  }
-
-  async findAll(puja_id: string) {
-    const { data, error } = await this.supabase.client
-      .from('puja_gallery')
-      .select('*')
-      .eq('puja_id', puja_id)
-      .order('sort_order');
-
-    if (error) throw new BadRequestException(error.message);
 
     return data;
   }
 
+  // ============================
+  // LIST IMAGES (PUBLIC)
+  // ============================
+  async findAll(puja_id: string) {
+    // 🔍 Validate puja exists
+    const { data: puja } = await this.supabase.client
+      .from('pujas')
+      .select('id')
+      .eq('id', puja_id)
+      .maybeSingle();
+
+    if (!puja) {
+      throw new NotFoundException('Puja not found');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('puja_gallery')
+      .select('*')
+      .eq('puja_id', puja_id)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return data;
+  }
+
+  // ============================
+  // DELETE IMAGE (ADMIN)
+  // ============================
   async remove(id: string) {
+    // 🔍 Check exists
+    const { data: record } = await this.supabase.client
+      .from('puja_gallery')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!record) {
+      throw new NotFoundException('Gallery image not found');
+    }
+
     const { error } = await this.supabase.client
       .from('puja_gallery')
       .delete()
       .eq('id', id);
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
 
-    return { message: "Image deleted" };
+    // ⚠️ Optional future enhancement:
+    // delete file from storage using record.image_url
+
+    return { message: 'Image deleted successfully' };
   }
 }

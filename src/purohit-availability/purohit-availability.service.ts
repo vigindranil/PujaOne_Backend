@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -6,7 +11,7 @@ export class PurohitAvailabilityService {
   constructor(private supabase: SupabaseService) {}
 
   // =========================
-  // PUROHIT ADD AVAILABILITY
+  // PUROHIT ADD / UPDATE AVAILABILITY
   // =========================
   async addAvailability(purohit_id: string, dto: any) {
     const { data, error } = await this.supabase.client
@@ -20,9 +25,20 @@ export class PurohitAvailabilityService {
         { onConflict: 'purohit_id,date' },
       )
       .select()
-      .single();
+      .maybeSingle();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to add availability: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      throw new InternalServerErrorException(
+        'Availability saved but no data returned',
+      );
+    }
+
     return data;
   }
 
@@ -30,7 +46,7 @@ export class PurohitAvailabilityService {
   // PUROHIT BLOCK DATE
   // =========================
   async blockDate(purohit_id: string, dto: any) {
-    const { data, error } = await this.supabase.client
+    const { error } = await this.supabase.client
       .from('purohit_availability')
       .upsert(
         {
@@ -39,11 +55,14 @@ export class PurohitAvailabilityService {
           time_slots: [],
         },
         { onConflict: 'purohit_id,date' },
-      )
-      .select()
-      .single();
+      );
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to block date: ${error.message}`,
+      );
+    }
+
     return { message: 'Date blocked successfully' };
   }
 
@@ -53,18 +72,22 @@ export class PurohitAvailabilityService {
   async checkAvailability(purohit_id: string, dto: any) {
     const { data, error } = await this.supabase.client
       .from('purohit_availability')
-      .select('*')
+      .select('time_slots')
       .eq('purohit_id', purohit_id)
       .eq('date', dto.date)
       .maybeSingle();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to check availability: ${error.message}`,
+      );
+    }
 
     const available =
-      data && data.time_slots?.includes(dto.time_slot);
+      !!data && data.time_slots?.includes(dto.time_slot);
 
     return {
-      available: !!available,
+      available,
     };
   }
 
@@ -79,49 +102,63 @@ export class PurohitAvailabilityService {
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
     const end = `${year}-${String(month).padStart(2, '0')}-31`;
 
-    const { data: availability } = await this.supabase.client
-      .from('purohit_availability')
-      .select('*')
-      .eq('purohit_id', purohit_id)
-      .gte('date', start)
-      .lte('date', end);
+    const { data: availability, error: aErr } =
+      await this.supabase.client
+        .from('purohit_availability')
+        .select('*')
+        .eq('purohit_id', purohit_id)
+        .gte('date', start)
+        .lte('date', end);
 
-    const { data: bookings } = await this.supabase.client
-      .from('bookings')
-      .select('date, time_slot')
-      .eq('purohit_id', purohit_id)
-      .gte('date', start)
-      .lte('date', end);
+    if (aErr) {
+      throw new BadRequestException(
+        `Failed to load availability: ${aErr.message}`,
+      );
+    }
+
+    const { data: bookings, error: bErr } =
+      await this.supabase.client
+        .from('bookings')
+        .select('date, time_slot')
+        .eq('purohit_id', purohit_id)
+        .gte('date', start)
+        .lte('date', end);
+
+    if (bErr) {
+      throw new BadRequestException(
+        `Failed to load bookings: ${bErr.message}`,
+      );
+    }
 
     const bookingMap: Record<string, string[]> = {};
-    bookings?.forEach(b => {
+    (bookings ?? []).forEach(b => {
       if (!bookingMap[b.date]) bookingMap[b.date] = [];
       bookingMap[b.date].push(b.time_slot);
     });
 
     return (availability ?? []).map(day => {
-      const bookedSlots = bookingMap[day.date] || [];
-      const availableSlots = day.time_slots.filter(
-        s => !bookedSlots.includes(s),
+      const bookedSlots = bookingMap[day.date] ?? [];
+      const availableSlots = (day.time_slots ?? []).filter(
+        slot => !bookedSlots.includes(slot),
       );
 
       return {
         date: day.date,
+        available: availableSlots.length > 0,
         available_slots: availableSlots,
         booked_slots: bookedSlots,
-        available: availableSlots.length > 0,
       };
     });
   }
 
   // =========================
-  // ADMIN CALENDAR (ALL)
+  // ADMIN CALENDAR (ALL PUROHITS)
   // =========================
   async getAdminCalendar(month: number, year: number) {
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
     const end = `${year}-${String(month).padStart(2, '0')}-31`;
 
-    const { data: availability } = await this.supabase.client
+    const { data, error } = await this.supabase.client
       .from('purohit_availability')
       .select(
         `
@@ -136,6 +173,12 @@ export class PurohitAvailabilityService {
       .gte('date', start)
       .lte('date', end);
 
-    return availability ?? [];
+    if (error) {
+      throw new BadRequestException(
+        `Failed to load admin calendar: ${error.message}`,
+      );
+    }
+
+    return data ?? [];
   }
 }

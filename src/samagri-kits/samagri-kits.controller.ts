@@ -19,6 +19,9 @@ import { CreateSamagriKitDto } from "./dto/create-kit.dto";
 import { UpdateSamagriKitDto } from "./dto/update-kit.dto";
 import { AddKitItemDto } from "./dto/add-kit-item.dto";
 import { UpdateKitItemDto } from "./dto/update-kit-item.dto";
+import { Public } from "../auth/decorators/public.decorator";
+
+
 
 @ApiTags("Samagri Kits")
 @Controller("samagri-kits")
@@ -27,7 +30,7 @@ export class SamagriKitsController {
 
   // ⭐ Admin create kit
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post("admin/create")
   create(@Body() dto: CreateSamagriKitDto) {
@@ -35,6 +38,7 @@ export class SamagriKitsController {
   }
 
   // ⭐ Public kits for puja
+  @Public()
   @Get(":puja_id")
   getKits(@Param("puja_id") puja_id: string) {
     return this.service.findByPuja(puja_id);
@@ -42,7 +46,7 @@ export class SamagriKitsController {
 
   // ⭐ Admin update kit
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch("admin/:id")
   update(@Param("id") id: string, @Body() dto: UpdateSamagriKitDto) {
@@ -51,7 +55,7 @@ export class SamagriKitsController {
 
   // ⭐ Admin delete kit
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete("admin/:id")
   remove(@Param("id") id: string) {
@@ -60,7 +64,7 @@ export class SamagriKitsController {
 
   // ⭐ Add item inside kit
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post("admin/add-item")
   addItem(@Body() dto: AddKitItemDto) {
@@ -69,7 +73,7 @@ export class SamagriKitsController {
 
   // ⭐ Update item
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch("admin/item/:id")
   updateItem(@Param("id") id: string, @Body() dto: UpdateKitItemDto) {
@@ -78,7 +82,7 @@ export class SamagriKitsController {
 
   // ⭐ Delete item
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete("admin/item/:id")
   removeItem(@Param("id") id: string) {

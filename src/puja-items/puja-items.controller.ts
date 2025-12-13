@@ -16,6 +16,9 @@ import { Roles } from '../auth/guards/roles.decorator';
 import { PujaItemsService } from './puja-items.service';
 import { CreatePujaItemDto } from './dto/create-puja-item.dto';
 import { UpdatePujaItemDto } from './dto/update-puja-item.dto';
+import { Public } from '../auth/decorators/public.decorator';
+
+
 
 @ApiTags("Puja Items")
 @Controller("puja-items")
@@ -24,7 +27,7 @@ export class PujaItemsController {
 
   // ⭐ Admin: Add item to puja
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post("admin/:puja_id")
   create(
@@ -33,7 +36,7 @@ export class PujaItemsController {
   ) {
     return this.service.create(puja_id, dto);
   }
-
+  @Public()
   // ⭐ Public: Get items for puja
   @Get("puja/:puja_id")
   findByPuja(@Param("puja_id") puja_id: string) {
@@ -42,7 +45,7 @@ export class PujaItemsController {
 
   // ⭐ Admin: Update item
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch("admin/:id")
   update(@Param("id") id: string, @Body() dto: UpdatePujaItemDto) {
@@ -51,7 +54,7 @@ export class PujaItemsController {
 
   // ⭐ Admin: Delete item
   @Roles("ADMIN")
-  @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete("admin/:id")
   remove(@Param("id") id: string) {

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import * as bcrypt from 'bcrypt';
 import sharp from 'sharp';
@@ -7,9 +12,9 @@ import sharp from 'sharp';
 export class PurohitService {
   constructor(private supabase: SupabaseService) {}
 
-  // ------------------------------------
-  // ADMIN: CREATE PUROHIT IN ONE SHOT
-  // ------------------------------------
+  // =====================================
+  // ADMIN: CREATE PUROHIT (ONE SHOT)
+  // =====================================
   async createOneShot(dto: any) {
     const tempPassword = Math.random().toString(36).slice(-8);
     const passwordHash = await bcrypt.hash(tempPassword, 10);
@@ -25,7 +30,11 @@ export class PurohitService {
       .select('*')
       .single();
 
-    if (userError) throw new Error(userError.message);
+    if (userError) {
+      throw new BadRequestException(
+        `Failed to create user: ${userError.message}`,
+      );
+    }
 
     const { data: purohit, error: pErr } = await this.supabase.client
       .from('purohits')
@@ -36,7 +45,7 @@ export class PurohitService {
         experience_years: dto.experienceYears,
         languages: dto.languages,
         specialization: dto.specialization,
-        bio: dto.bio,
+        bio: dto.bio ?? null,
         rating: 5,
         completed_pujas: 0,
         available: true,
@@ -44,7 +53,11 @@ export class PurohitService {
       .select('*')
       .single();
 
-    if (pErr) throw new Error(pErr.message);
+    if (pErr) {
+      throw new BadRequestException(
+        `Failed to create purohit profile: ${pErr.message}`,
+      );
+    }
 
     return {
       message: 'Purohit created successfully',
@@ -54,102 +67,139 @@ export class PurohitService {
     };
   }
 
-  // ------------------------------------
-  // LIST
-  // ------------------------------------
+  // =====================================
+  // LIST ALL
+  // =====================================
   async findAll() {
     const { data, error } = await this.supabase.client
       .from('purohits')
       .select('*');
 
-    if (error) throw new Error(error.message);
-    return data;
+    if (error) {
+      throw new BadRequestException(
+        `Failed to fetch purohits: ${error.message}`,
+      );
+    }
+
+    return data ?? [];
   }
 
-  // ------------------------------------
+  // =====================================
   // GET ONE
-  // ------------------------------------
+  // =====================================
   async findOne(id: string) {
     const { data, error } = await this.supabase.client
       .from('purohits')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to fetch purohit: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException(`Purohit not found (ID=${id})`);
+    }
+
     return data;
   }
 
-  // ------------------------------------
+  // =====================================
   // UPDATE (ADMIN)
-  // ------------------------------------
+  // =====================================
   async update(id: string, dto: any) {
     const { data, error } = await this.supabase.client
       .from('purohits')
       .update(dto)
       .eq('id', id)
       .select('*')
-      .single();
+      .maybeSingle();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to update purohit: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException(`Purohit not found (ID=${id})`);
+    }
+
     return data;
   }
 
-  // ------------------------------------
+  // =====================================
   // UPDATE AVAILABILITY
-  // ------------------------------------
+  // =====================================
   async updateAvailability(id: string, available: boolean) {
     const { data, error } = await this.supabase.client
       .from('purohits')
       .update({ available })
       .eq('id', id)
-      .single();
+      .select('*')
+      .maybeSingle();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to update availability: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException(`Purohit not found (ID=${id})`);
+    }
 
     return data;
   }
 
-  // ------------------------------------
+  // =====================================
   // UPLOAD AVATAR (ADVANCED)
-  // ------------------------------------
+  // =====================================
   async uploadAvatar(id: string, file: Express.Multer.File) {
-    const bucket = 'purohit-avatars';
+    if (!file) {
+      throw new BadRequestException('Image file is required');
+    }
 
-    // Validate File
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Only JPG, PNG, WEBP allowed');
+      throw new BadRequestException('Only JPG, PNG, WEBP images allowed');
     }
 
     if (file.size > 5 * 1024 * 1024) {
       throw new BadRequestException('File too large (max 5MB)');
     }
 
-    const ext = file.originalname.split('.').pop();
-    const fileName = `${id}-${Date.now()}.${ext}`;
+    const bucket = 'purohit-avatars';
+    const fileName = `${id}-${Date.now()}.jpg`;
 
-    // Remove Old Avatar If Exists
+    // 🔥 Fetch old avatar
     const { data: existing } = await this.supabase.client
       .from('purohits')
       .select('profile_image_url')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (existing?.profile_image_url) {
-      const oldFile = existing.profile_image_url.split('/').pop();
-      if (oldFile) {
-        await this.supabase.storage.from(bucket).remove([oldFile]);
-      }
+    if (!existing) {
+      throw new NotFoundException(`Purohit not found (ID=${id})`);
     }
 
-    // Compress Image
+    // 🔥 Remove old avatar
+    if (existing.profile_image_url) {
+      await this.supabase.storage
+        .from(bucket)
+        .remove([existing.profile_image_url]);
+    }
+
+    // 🔥 Compress image
     const compressed = await sharp(file.buffer)
       .resize(800)
       .jpeg({ quality: 80 })
       .toBuffer();
 
-    // Upload New File
+    // 🔥 Upload
     const { error: uploadError } = await this.supabase.storage
       .from(bucket)
       .upload(fileName, compressed, {
@@ -157,56 +207,55 @@ export class PurohitService {
         upsert: true,
       });
 
-    if (uploadError) throw new Error(uploadError.message);
-
-    // Generate Signed URL (24 hours)
-    const { data: signed } = await this.supabase.storage
-      .from(bucket)
-      .createSignedUrl(fileName, 60 * 60 * 24);
-
-    const signedUrl = signed?.signedUrl ?? null;
-    if (!signedUrl) {
-      throw new Error('Failed to generate signed URL');
+    if (uploadError) {
+      throw new InternalServerErrorException(
+        `Avatar upload failed: ${uploadError.message}`,
+      );
     }
 
-    // Update DB
+    // 🔥 Update DB
     const { data, error } = await this.supabase.client
       .from('purohits')
       .update({ profile_image_url: fileName })
       .eq('id', id)
       .select('*')
-      .single();
+      .maybeSingle();
 
-    if (error) throw new Error(error.message);
+    if (error || !data) {
+      throw new InternalServerErrorException(
+        'Avatar uploaded but failed to update DB',
+      );
+    }
 
     return {
       message: 'Avatar updated successfully',
-      signed_url: signedUrl,
+      image_path: fileName,
       purohit: data,
     };
   }
 
-  // ------------------------------------
-  // GET SIGNED AVATAR URL
-  // ------------------------------------
+  // =====================================
+  // GET AVATAR (PUBLIC)
+  // =====================================
   async getAvatar(id: string) {
-  // Fetch only the public profile_image_url from DB
-  const { data, error } = await this.supabase.client
-    .from('purohits')
-    .select('profile_image_url')
-    .eq('id', id)
-    .single();
+    const { data, error } = await this.supabase.client
+      .from('purohits')
+      .select('profile_image_url')
+      .eq('id', id)
+      .maybeSingle();
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      throw new BadRequestException(
+        `Failed to fetch avatar: ${error.message}`,
+      );
+    }
 
-  if (!data?.profile_image_url) {
-    throw new Error('No avatar found for this Purohit');
+    if (!data?.profile_image_url) {
+      throw new NotFoundException('No avatar found for this purohit');
+    }
+
+    return {
+      image_path: data.profile_image_url,
+    };
   }
-
-  // Just return the stored public URL
-  return {
-    url: data.profile_image_url,
-  };
-}
-
 }
