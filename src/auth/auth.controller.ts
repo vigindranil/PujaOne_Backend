@@ -5,6 +5,8 @@ import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
+import { Throttle } from '@nestjs/throttler';
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -16,7 +18,14 @@ export class AuthController {
     const user = await this.authService.register(dto as any);
     return { id: user.id, name: user.name, phone: user.phone };
   }
- @Public()
+
+ @Throttle({
+    default: {
+        limit: 5,
+        ttl: 60,
+    },
+    })
+  @Public()
   @Post('login')
   @ApiOperation({ summary: 'Login using phone + password' })
   @ApiBody({ type: LoginDto })

@@ -6,12 +6,15 @@ import { UpdatePujaDto } from './dto/update-puja.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { CacheInterceptor } from '@nestjs/cache-manager';
+import { UseInterceptors } from '@nestjs/common';
 
 @ApiTags('Puja')
 @Controller('puja')
 export class PujasController {
   constructor(private svc: PujasService) {}
 
+  @UseInterceptors(CacheInterceptor)
   @Public()
   @Get()
   @ApiOperation({ summary: 'List pujas' })

@@ -1,25 +1,25 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsUUID, IsArray, IsNumber, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
-
-class AddonSelection {
-  @ApiProperty()
-  @IsUUID()
-  addon_id: string;
-
-  @ApiProperty()
-  @IsNumber()
-  quantity: number;
-}
+import { IsUUID, IsArray, IsOptional, IsNumber } from "class-validator";
 
 export class CalculatePriceDto {
   @ApiProperty()
   @IsUUID()
   puja_type_id: string;
 
-  @ApiProperty({ type: [AddonSelection] })
+  @ApiProperty({
+    required: false,
+    example: [{ addon_id: "uuid", quantity: 1 }],
+  })
+  @IsOptional()
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AddonSelection)
-  addons: AddonSelection[];
+  addons?: {
+    addon_id: string;
+    quantity: number;
+  }[];
+
+  // 🔥 ADD THIS (THIS FIXES YOUR ERROR)
+  @ApiProperty({ required: false, default: 0 })
+  @IsOptional()
+  @IsNumber()
+  samagri_price?: number;
 }

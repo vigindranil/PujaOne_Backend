@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { CacheModule } from '@nestjs/cache-manager';
 
 // Core system modules
 import { SupabaseModule } from './supabase/supabase.module';
@@ -27,20 +28,45 @@ import { SamagriKitsModule } from './samagri-kits/samagri-kits.module';
 // 🔐 GLOBAL GUARDS
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+// 🔒 Throttling for rate limit
+
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { PaymentsModule } from './payments/payments.module';
+
+
 
 @Module({
   imports: [
-    // 🌍 Environment variables
+    // 🌍 ENV
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
-    // 🔧 Core infrastructure
+    // 🚀 GLOBAL CACHE (🔥 ADD THIS)
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 600, // 10 minutes
+      max: 1000,
+    }),
+   // 🚦 RATE LIMITING (ANTI-ABUSE)
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60,     // seconds
+          limit: 100,  // requests per IP
+        },
+      ],
+    }),
+
+
+
+
+    // 🔧 Core infra
     SupabaseModule,
     LoggerModule,
     EncryptionModule,
 
-    // 🚀 Feature modules
+    // 📦 Feature modules
     UsersModule,
     AuthModule,
     PurohitModule,
@@ -56,18 +82,20 @@ import { RolesGuard } from './auth/guards/roles.guard';
     BookingModule,
     PurohitAvailabilityModule,
     SamagriKitsModule,
+    PaymentsModule,
   ],
 
-  // 🔐 APPLY GUARDS GLOBALLY
+  // 🔐 GLOBAL GUARDS
   providers: [
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,   // 1️⃣ JWT check first
+      useClass: JwtAuthGuard,   // 1️⃣ Auth
     },
     {
       provide: APP_GUARD,
-      useClass: RolesGuard,     // 2️⃣ Role check second
+      useClass: RolesGuard,     // 2️⃣ Role
     },
   ],
+  
 })
 export class AppModule {}

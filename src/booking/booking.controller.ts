@@ -68,8 +68,18 @@ export class BookingController {
   }
 
   // 🧮 PUBLIC PRICE CALCULATION
+  
   @Post("calculate-price")
   calculate(@Body() dto: CalculatePriceDto) {
     return this.service.calculatePrice(dto);
   }
+    @Post(':id/cancel')
+    @UseGuards(JwtAuthGuard)
+    cancelBooking(
+    @Param('id') bookingId: string,
+    @Body() body: { reason?: string }
+    ) {
+    return this.service.requestCancellation(bookingId, body.reason);
+    }
+
 }

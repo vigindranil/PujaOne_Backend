@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   UseGuards,
+  UseInterceptors
 } from '@nestjs/common';
 
 import { PujaCategoryService } from './puja-category.service';
@@ -17,7 +18,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
-
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 
 @ApiTags('Puja Categories')
@@ -35,6 +36,8 @@ export class PujaCategoryController {
   }
 
   // ⭐ Public list
+
+  @UseInterceptors(CacheInterceptor)
   @Public()
   @Get()
   findAll() {
@@ -60,6 +63,7 @@ export class PujaCategoryController {
   // ⭐ Admin delete
   @Roles('ADMIN')
 //   @UseGuards(JwtAuthGuard)
+
   @ApiBearerAuth()
   @Delete(':id')
   remove(@Param('id') id: string) {
