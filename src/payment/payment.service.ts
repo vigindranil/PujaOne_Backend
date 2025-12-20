@@ -8,24 +8,20 @@ export class PaymentService {
   private razorpay: Razorpay;
 
   constructor(private supabase: SupabaseService) {
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      throw new Error('Razorpay credentials missing');
-    }
-
     this.razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
     });
   }
 
-  // =====================================================
+  // =====================================
   // 1️⃣ CREATE RAZORPAY ORDER
-  // =====================================================
-  async createOrder(booking_id: string) {
+  // =====================================
+  async createOrder(bookingId: string) {
     const { data: booking, error } = await this.supabase.client
       .from('bookings')
       .select('id, price, payment_status')
-      .eq('id', booking_id)
+      .eq('id', bookingId)
       .single();
 
     if (error || !booking) {
@@ -37,128 +33,84 @@ export class PaymentService {
     }
 
     const order = await this.razorpay.orders.create({
-      amount: Math.round(Number(booking.price) * 100), // paise
+      amount: Number(booking.price) * 100,
       currency: 'INR',
-      receipt: booking_id,
+      receipt: bookingId,
       payment_capture: true,
     });
 
-    // 🔥 Store order in separate table (BEST PRACTICE)
     await this.supabase.client
-      .from('booking_payments')
-      .insert({
-        booking_id,
-        razorpay_order_id: order.id,
-        amount: booking.price,
-        status: 'CREATED',
-      });
+      .from('bookings')
+      .update({ razorpay_order_id: order.id })
+      .eq('id', bookingId);
 
-    return {
-      order_id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-    };
+    return order;
   }
 
-  // =====================================================
-  // 2️⃣ VERIFY WEBHOOK SIGNATURE (RAW BODY REQUIRED)
-  // =====================================================
+  // =====================================
+  // 2️⃣ VERIFY WEBHOOK SIGNATURE
+  // =====================================
   verifySignature(rawBody: Buffer, signature: string): boolean {
-    if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
-      throw new Error('Webhook secret missing');
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!secret) {
+      throw new Error('RAZORPAY_WEBHOOK_SECRET missing');
     }
 
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+      .createHmac('sha256', secret)
       .update(rawBody)
       .digest('hex');
 
     return expectedSignature === signature;
   }
 
-  // =====================================================
+  // =====================================
   // 3️⃣ CONFIRM PAYMENT (IDEMPOTENT)
-  // =====================================================
-  async confirmPayment(
-    razorpay_order_id: string,
-    razorpay_payment_id: string,
-  ) {
-    const { data: payment, error } = await this.supabase.client
-      .from('booking_payments')
-      .select('*')
-      .eq('razorpay_order_id', razorpay_order_id)
+  // =====================================
+  async confirmPayment(orderId: string, paymentId: string) {
+    const { data: booking } = await this.supabase.client
+      .from('bookings')
+      .select('id, payment_status')
+      .eq('razorpay_order_id', orderId)
       .single();
 
-    if (error || !payment) {
-      throw new BadRequestException('Invalid payment reference');
-    }
+    if (!booking) return;
 
-    // 🔥 IDEMPOTENCY GUARANTEE
-    if (payment.status === 'PAID') {
-      return; // already processed → ignore duplicate webhook
-    }
+    // 🔁 IDEMPOTENT
+    if (booking.payment_status === 'PAID') return;
 
-    // 1️⃣ Mark payment table
-    await this.supabase.client
-      .from('booking_payments')
-      .update({
-        status: 'PAID',
-        razorpay_payment_id,
-      })
-      .eq('id', payment.id);
-
-    // 2️⃣ Update booking
     await this.supabase.client
       .from('bookings')
       .update({
         payment_status: 'PAID',
         status: 'CONFIRMED',
-        razorpay_payment_id,
+        razorpay_payment_id: paymentId,
       })
-      .eq('id', payment.booking_id);
+      .eq('id', booking.id);
   }
 
-  // =====================================================
-// 4️⃣ CONFIRM REFUND (IDEMPOTENT)
-// =====================================================
-async confirmRefund(
-  razorpay_payment_id: string,
-  razorpay_refund_id: string,
-) {
-  const { data: booking, error } = await this.supabase.client
-    .from('bookings')
-    .select('id, payment_status')
-    .eq('razorpay_payment_id', razorpay_payment_id)
-    .single();
+  // =====================================
+  // 4️⃣ CONFIRM REFUND (IDEMPOTENT)
+  // =====================================
+  async confirmRefund(paymentId: string, refundId: string) {
+    // Update refund table (if exists)
+    await this.supabase.client
+      .from('booking_refunds')
+      .update({
+        status: 'SUCCESS',
+        razorpay_refund_id: refundId,
+        processed_at: new Date(),
+      })
+      .eq('razorpay_payment_id', paymentId)
+      .eq('status', 'PENDING');
 
-  if (error || !booking) {
-    return; // 🔥 silently ignore (webhook safety)
+    // Update booking
+    await this.supabase.client
+      .from('bookings')
+      .update({
+        status: 'CANCELLED',
+        payment_status: 'REFUNDED',
+      })
+      .eq('razorpay_payment_id', paymentId);
   }
-
-  // 🔥 IDEMPOTENCY CHECK
-  if (booking.payment_status === 'REFUNDED') {
-    return;
-  }
-
-  // ✅ update refund table
-  await this.supabase.client
-    .from('booking_refunds')
-    .update({
-      status: 'SUCCESS',
-      razorpay_refund_id,
-      processed_at: new Date(),
-    })
-    .eq('booking_id', booking.id)
-    .eq('status', 'PENDING');
-
-  // ✅ update booking
-  await this.supabase.client
-    .from('bookings')
-    .update({
-      status: 'CANCELLED',
-      payment_status: 'REFUNDED',
-    })
-    .eq('id', booking.id);
-}
-
 }

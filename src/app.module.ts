@@ -31,7 +31,11 @@ import { RolesGuard } from './auth/guards/roles.guard';
 // 🔒 Throttling for rate limit
 
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { PaymentsModule } from './payments/payments.module';
+import { PaymentsModule } from './payment/payment.module';
+
+import { InvoiceModule } from './invoice/invoice.module';
+import { EmailModule } from './email/email.module';
+
 
 
 
@@ -83,6 +87,9 @@ import { PaymentsModule } from './payments/payments.module';
     PurohitAvailabilityModule,
     SamagriKitsModule,
     PaymentsModule,
+    EmailModule,
+    InvoiceModule,
+  
   ],
 
   // 🔐 GLOBAL GUARDS

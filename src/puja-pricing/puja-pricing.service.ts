@@ -10,11 +10,12 @@ import { UpdatePricingOptionDto } from './dto/update-pricing.dto';
 
 @Injectable()
 export class PujaPricingService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(private readonly supabase: SupabaseService) {}
 
   // =========================
-  // CREATE PRICING OPTION
+  // PRICING OPTION CRUD
   // =========================
+
   async create(puja_id: string, dto: CreatePricingOptionDto) {
     const { data, error } = await this.supabase.client
       .from('puja_pricing_options')
@@ -22,164 +23,124 @@ export class PujaPricingService {
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to create pricing option: ${error.message}`,
-      );
-    }
-
-    if (!data) {
-      throw new InternalServerErrorException(
-        'Pricing option created but no data returned',
-      );
-    }
-
+    if (error) throw new BadRequestException(error.message);
     return data;
   }
 
-  // =========================
-  // LIST PRICING OPTIONS
-  // =========================
   async findAll(puja_id: string) {
     const { data, error } = await this.supabase.client
       .from('puja_pricing_options')
       .select('*')
       .eq('puja_id', puja_id)
+      .eq('is_active', true)
       .order('sort_order');
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to fetch pricing options: ${error.message}`,
-      );
-    }
-
+    if (error) throw new BadRequestException(error.message);
     return data ?? [];
   }
 
-  // =========================
-  // UPDATE PRICING OPTION
-  // =========================
   async update(id: string, dto: UpdatePricingOptionDto) {
     const { data, error } = await this.supabase.client
       .from('puja_pricing_options')
-      .update({ ...dto, updated_at: new Date() })
+      .update({ ...dto, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to update pricing option: ${error.message}`,
-      );
-    }
-
-    if (!data) {
-      throw new NotFoundException('Pricing option not found');
-    }
-
+    if (error) throw new BadRequestException(error.message);
+    if (!data) throw new NotFoundException('Pricing option not found');
     return data;
   }
 
-  // =========================
-  // DELETE PRICING OPTION
-  // =========================
   async remove(id: string) {
     const { error } = await this.supabase.client
       .from('puja_pricing_options')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to delete pricing option: ${error.message}`,
-      );
-    }
-
-    return { message: 'Pricing option deleted successfully' };
+    if (error) throw new BadRequestException(error.message);
+    return { message: 'Pricing option deleted' };
   }
 
   // =========================
-  // 👑 ADMIN PUROHIT CALENDAR
+  // PACKAGE → ADDON
   // =========================
-  async getAdminCalendar(month: number, year: number) {
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-    // 1️⃣ PUROHITS
-    const { data: purohits, error: pErr } = await this.supabase.client
-      .from('purohits')
-      .select('id, name');
+  async addAddonToPackage(pricingId: string, addonId: string) {
+    const { error } = await this.supabase.client
+      .from('puja_pricing_addons')
+      .insert({ pricing_id: pricingId, addon_id: addonId });
 
-    if (pErr) {
-      throw new InternalServerErrorException(
-        `Failed to fetch purohits: ${pErr.message}`,
-      );
-    }
+    if (error) throw new BadRequestException(error.message);
+    return { message: 'Addon added to package' };
+  }
 
-    // 2️⃣ AVAILABILITY
-    const { data: availability, error: aErr } =
-      await this.supabase.client
-        .from('purohit_availability')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+  async removeAddonFromPackage(pricingId: string, addonId: string) {
+    const { error } = await this.supabase.client
+      .from('puja_pricing_addons')
+      .delete()
+      .eq('pricing_id', pricingId)
+      .eq('addon_id', addonId);
 
-    if (aErr) {
-      throw new InternalServerErrorException(
-        `Failed to fetch availability: ${aErr.message}`,
-      );
-    }
+    if (error) throw new BadRequestException(error.message);
+    return { message: 'Addon removed from package' };
+  }
 
-    // 3️⃣ BOOKINGS
-    const { data: bookings, error: bErr } =
-      await this.supabase.client
-        .from('bookings')
-        .select('purohit_id, date, time_slot')
-        .gte('date', startDate)
-        .lte('date', endDate);
+  async getPackageAddons(pricingId: string) {
+    const { data, error } = await this.supabase.client
+      .from('puja_pricing_addons')
+      .select(`
+        puja_addons (
+          id,
+          title,
+          description,
+          price
+        )
+      `)
+      .eq('pricing_id', pricingId);
 
-    if (bErr) {
-      throw new InternalServerErrorException(
-        `Failed to fetch bookings: ${bErr.message}`,
-      );
-    }
+    if (error) throw new BadRequestException(error.message);
+    return (data ?? []).map(r => r.puja_addons);
+  }
 
-    // 4️⃣ BOOKING MAP
-    const bookingMap: Record<string, Record<string, string[]>> = {};
+  // =========================
+  // PACKAGE → REQUIREMENT
+  // =========================
 
-    (bookings ?? []).forEach(b => {
-      bookingMap[b.purohit_id] ??= {};
-      bookingMap[b.purohit_id][b.date] ??= [];
-      bookingMap[b.purohit_id][b.date].push(b.time_slot);
-    });
+  async addRequirementToPackage(pricingId: string, requirementId: string) {
+    const { error } = await this.supabase.client
+      .from('puja_pricing_requirements')
+      .insert({ pricing_id: pricingId, requirement_id: requirementId });
 
-    // 5️⃣ CALENDAR BUILD
-    return (purohits ?? []).map(purohit => {
-      const purohitAvailability = (availability ?? []).filter(
-        a => a.purohit_id === purohit.id,
-      );
+    if (error) throw new BadRequestException(error.message);
+    return { message: 'Requirement added to package' };
+  }
 
-      const calendar = purohitAvailability.map(day => {
-        const bookedSlots =
-          bookingMap[purohit.id]?.[day.date] ?? [];
+  async removeRequirementFromPackage(pricingId: string, requirementId: string) {
+    const { error } = await this.supabase.client
+      .from('puja_pricing_requirements')
+      .delete()
+      .eq('pricing_id', pricingId)
+      .eq('requirement_id', requirementId);
 
-        const availableSlots = day.time_slots.filter(
-          slot => !bookedSlots.includes(slot),
-        );
+    if (error) throw new BadRequestException(error.message);
+    return { message: 'Requirement removed from package' };
+  }
 
-        return {
-          date: day.date,
-          available: availableSlots.length > 0,
-          available_slots: availableSlots,
-          booked_slots: bookedSlots,
-        };
-      });
+  async getPackageRequirements(pricingId: string) {
+    const { data, error } = await this.supabase.client
+      .from('puja_pricing_requirements')
+      .select(`
+        puja_requirements (
+          id,
+          item_name,
+          quantity,
+          notes
+        )
+      `)
+      .eq('pricing_id', pricingId);
 
-      return {
-        purohit_id: purohit.id,
-        purohit_name: purohit.name,
-        calendar,
-      };
-    });
+    if (error) throw new BadRequestException(error.message);
+    return (data ?? []).map(r => r.puja_requirements);
   }
 }

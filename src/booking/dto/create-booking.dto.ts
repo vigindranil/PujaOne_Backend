@@ -8,12 +8,23 @@ import {
   IsNumber,
   IsArray,
   IsIn,
+  IsEmail,
+  IsObject,
 } from "class-validator";
 
 export class CreateBookingDto {
+
+  // =========================
+  // PUJA & SLOT
+  // =========================
   @ApiProperty()
   @IsUUID()
-  puja_type_id: string;
+  puja_id: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  pricing_id?: string; // ✅ PACKAGE
 
   @ApiProperty()
   @IsDateString()
@@ -23,29 +34,57 @@ export class CreateBookingDto {
   @IsString()
   time_slot: string;
 
+  // =========================
+  // ADDRESS
+  // =========================
   @ApiProperty()
-  @IsString()
-  address: string;
+  @IsObject()
+  address: any;
 
   @ApiProperty({ required: false })
   @IsOptional()
   address_meta?: any;
 
-  @ApiProperty({ default: false })
+  // =========================
+  // CONTACT
+  // =========================
+  @ApiProperty()
+  @IsString()
+  contact_name: string;
+
+  @ApiProperty()
+  @IsString()
+  contact_phone: string;
+
+  @ApiProperty()
+  @IsEmail()
+  contact_email: string;
+
+  // =========================
+  // SAVE ADDRESS
+  // =========================
+  @IsOptional()
+  @IsBoolean()
+  save_address?: boolean;
+
+  @IsOptional()
+  @IsString()
+  address_label?: string;
+
+  // =========================
+  // SAMAGRI
+  // =========================
   @IsOptional()
   @IsBoolean()
   samagri_included?: boolean;
 
-  @ApiProperty({ required: false })
   @IsOptional()
   @IsUUID()
   samagri_kit_id?: string;
 
-  // ✅ addons
-  @ApiProperty({
-    required: false,
-    example: [{ addon_id: "uuid", quantity: 1 }],
-  })
+  // =========================
+  // CUSTOM ADDONS
+  // =========================
   @IsOptional()
   @IsArray()
   addons?: {
@@ -53,13 +92,9 @@ export class CreateBookingDto {
     quantity: number;
   }[];
 
-  // ✅ samagri price (optional)
-  @ApiProperty({ required: false, default: 0 })
-  @IsOptional()
-  @IsNumber()
-  price?: number;
-
-  // ✅ payment mode
+  // =========================
+  // PAYMENT
+  // =========================
   @ApiProperty({ example: "CASH | ONLINE" })
   @IsIn(["CASH", "ONLINE"])
   payment_mode: "CASH" | "ONLINE";

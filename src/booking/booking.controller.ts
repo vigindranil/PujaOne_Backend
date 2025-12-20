@@ -1,85 +1,117 @@
-import { Controller, Post, Get, Patch, Param, Body } from "@nestjs/common";
-import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Param,
+  Body,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
 import { BookingService } from "./booking.service";
 import { CreateBookingDto } from "./dto/create-booking.dto";
 import { UpdateStatusDto } from "./dto/update-status.dto";
 import { AssignPurohitDto } from "./dto/assign-purohit.dto";
 import { AddAddonDto } from "./dto/add-addon.dto";
-import { CalculatePriceDto } from "./dto/calculate-price.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/guards/roles.decorator";
-import { UseGuards } from "@nestjs/common";
+import { ProfileCompleteGuard } from "../auth/guards/profile-complete.guard";
 
 @ApiTags("Bookings")
 @ApiBearerAuth()
 @Controller("bookings")
 export class BookingController {
-  constructor(private service: BookingService) {}
+  constructor(private readonly service: BookingService) {}
 
-  // 👤 USER CREATE BOOKING
-  @UseGuards(JwtAuthGuard)
+  // =================================================
+  // 👤 USER: CREATE BOOKING (PACKAGE / CUSTOM)
+  // =================================================
+  @UseGuards(JwtAuthGuard, ProfileCompleteGuard)
   @Post()
-  create(@Body() dto: CreateBookingDto) {
-    return this.service.create(dto);
+  @ApiOperation({
+    summary: "User: Create booking (supports package or custom)",
+  })
+  create(@Req() req, @Body() dto: CreateBookingDto) {
+    return this.service.create(req.user.id, dto);
   }
 
-  // 👑 ADMIN VIEW ALL
-  @Roles("ADMIN")
-  @Get()
-  findAll() {
-    return this.service.findAll();
-  }
-
-  // 👤 USER / ADMIN VIEW ONE
+  // =================================================
+  // 👤 USER / 👑 ADMIN: VIEW SINGLE BOOKING
+  // =================================================
   @UseGuards(JwtAuthGuard)
   @Get(":id")
+  @ApiOperation({ summary: "View booking details" })
   findOne(@Param("id") id: string) {
     return this.service.findOne(id);
   }
 
-  // 👑 ADMIN UPDATE STATUS
+  // =================================================
+  // 👑 ADMIN: VIEW ALL BOOKINGS
+  // =================================================
   @Roles("ADMIN")
-  @Patch(":id/status")
-  updateStatus(
-    @Param("id") id: string,
-    @Body() dto: UpdateStatusDto
-  ) {
-    return this.service.updateStatus(id, dto, "ADMIN");
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  @ApiOperation({ summary: "Admin: list all bookings" })
+  findAll() {
+    return this.service.findAll();
   }
 
-  // 👑 ADMIN ASSIGN PUROHIT
+  // =================================================
+  // 👑 ADMIN: UPDATE BOOKING STATUS
+  // =================================================
   @Roles("ADMIN")
+  @UseGuards(JwtAuthGuard)
+  @Patch(":id/status")
+  @ApiOperation({ summary: "Admin: update booking status" })
+  updateStatus(
+    @Param("id") id: string,
+    @Body() dto: UpdateStatusDto,
+    @Req() req,
+  ) {
+    return this.service.updateStatus(id, dto, req.user.id);
+  }
+
+  // =================================================
+  // 👑 ADMIN: ASSIGN PUROHIT
+  // =================================================
+  @Roles("ADMIN")
+  @UseGuards(JwtAuthGuard)
   @Patch(":id/assign-purohit")
+  @ApiOperation({ summary: "Admin: assign purohit to booking" })
   assignPurohit(
     @Param("id") id: string,
-    @Body() dto: AssignPurohitDto
+    @Body() dto: AssignPurohitDto,
   ) {
     return this.service.assignPurohit(id, dto);
   }
 
-  // 👤 USER ADD ADDON
+  // =================================================
+  // 👤 USER: ADD CUSTOM ADDON (AFTER BOOKING)
+  // =================================================
   @UseGuards(JwtAuthGuard)
   @Patch(":id/add-addon")
+  @ApiOperation({ summary: "User: add custom addon to booking" })
   addAddon(
     @Param("id") id: string,
-    @Body() dto: AddAddonDto
+    @Body() dto: AddAddonDto,
   ) {
     return this.service.addAddon(id, dto);
   }
 
-  // 🧮 PUBLIC PRICE CALCULATION
-  
-  @Post("calculate-price")
-  calculate(@Body() dto: CalculatePriceDto) {
-    return this.service.calculatePrice(dto);
+  // =================================================
+  // 👤 USER: CANCEL BOOKING
+  // =================================================
+  @UseGuards(JwtAuthGuard)
+  @Post(":id/cancel")
+  @ApiOperation({ summary: "User: request booking cancellation" })
+  cancelBooking(
+    @Param("id") bookingId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.service.requestCancellation(
+      bookingId,
+      body.reason,
+    );
   }
-    @Post(':id/cancel')
-    @UseGuards(JwtAuthGuard)
-    cancelBooking(
-    @Param('id') bookingId: string,
-    @Body() body: { reason?: string }
-    ) {
-    return this.service.requestCancellation(bookingId, body.reason);
-    }
-
 }

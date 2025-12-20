@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable,UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
@@ -26,15 +26,63 @@ export class AuthService {
     };
   }
 
-  async register(dto: { name: string; phone: string; password: string; role?: string }) {
+  async register(dto: { name: string; phone: string; email?: string; password: string; role?: string }) {
     const saltRounds = 12;
     const hash = await bcrypt.hash(dto.password, saltRounds);
     const user = await this.usersService.create({
       name: dto.name,
       phone: dto.phone,
+      email: dto.email ?? undefined, 
       password_hash: hash,
       role: dto.role ?? 'USER',
     });
     return user;
   }
+
+   // =========================
+  // SEND OTP (DEV MODE)
+  // =========================
+  async sendOtp(phone: string) {
+    // DEV MODE ONLY — no SMS
+    return {
+      success: true,
+      message: 'OTP sent successfully (DEV MODE)',
+      otp: '999999', // optional: remove in prod
+    };
+  }
+
+  // =========================
+  // VERIFY OTP + AUTO REGISTER
+  // =========================
+  async verifyOtp(phone: string, otp: string) {
+    // DEV OTP CHECK
+    if (otp !== '999999') {
+      throw new UnauthorizedException('Invalid OTP');
+    }
+
+    // FIND USER
+    let user = await this.usersService.findByPhone(phone);
+
+    // AUTO REGISTER IF NOT EXISTS
+    if (!user) {
+      user = await this.usersService.create({
+        phone,
+        role: 'USER',
+        is_verified: true,
+      });
+    }
+
+    // JWT PAYLOAD
+    const payload = {
+      sub: user.id,
+      phone: user.phone,
+      role: user.role,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user,
+    };
+  }
+  
 }
