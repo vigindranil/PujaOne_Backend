@@ -35,6 +35,8 @@ import { PaymentsModule } from './payment/payment.module';
 
 import { InvoiceModule } from './invoice/invoice.module';
 import { EmailModule } from './email/email.module';
+import { GstReportModule } from './admin/ gst-report/gst-report.module';
+import { DashboardModule } from './admin/dashboard/dashboard.module';
 
 
 
@@ -89,6 +91,8 @@ import { EmailModule } from './email/email.module';
     PaymentsModule,
     EmailModule,
     InvoiceModule,
+    GstReportModule,
+    DashboardModule,
   
   ],
 
